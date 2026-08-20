@@ -117,9 +117,15 @@ COPY --from=ops --chown=nextjs:nodejs /ops /ops
 COPY --chown=nextjs:nodejs docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Mount a persistent volume here — the database must outlive the container.
+# The database must outlive the container, so /data is where a persistent volume
+# gets mounted — `docker run -v claycreations-data:/data`, or a Railway volume
+# with /data as its mount path.
+#
+# Deliberately NO `VOLUME /data` instruction: Railway rejects the Dockerfile
+# outright if it finds one ("docker VOLUME ... is not supported, use Railway
+# Volumes"). Nothing is lost — an explicit -v mount works either way, and the
+# entrypoint creates and chowns the directory at boot.
 RUN mkdir -p /data && chown nextjs:nodejs /data
-VOLUME /data
 
 EXPOSE 3000
 

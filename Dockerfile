@@ -39,7 +39,7 @@ COPY . .
 # The default matches the fallback in src/lib/shop-config.ts, so an unset value
 # still trips the app's own "setup incomplete" banner rather than shipping a
 # malformed wa.me link.
-ARG NEXT_PUBLIC_WHATSAPP_NUMBER="923001234567"
+ARG NEXT_PUBLIC_WHATSAPP_NUMBER="+923332402828"
 ENV NEXT_PUBLIC_WHATSAPP_NUMBER=$NEXT_PUBLIC_WHATSAPP_NUMBER
 
 ENV NEXT_TELEMETRY_DISABLED=1

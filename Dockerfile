@@ -81,6 +81,10 @@ RUN node -e ' \
   }, null, 2) + "\n"); \
 ' && npm install --ignore-scripts=false --no-audit --no-fund
 
+# Do not try to slim this down by deleting @prisma/studio-core and friends: the
+# CLI requires "@prisma/studio-core/data/bff" while booting *any* command, so
+# `migrate deploy` dies on a fresh volume. Measured, tried, reverted.
+
 # Layout mirrors the repo so prisma.config.ts's relative paths and seed.ts's
 # `../src/generated/prisma/client` import both resolve with /ops as the cwd.
 COPY --from=build /app/prisma ./prisma

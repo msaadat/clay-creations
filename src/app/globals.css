@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+/*
+ * ClayCreations palette: warm stone neutrals with a dusty rose accent, chosen to
+ * sit quietly behind photographs of the jewellery rather than compete with them.
+ * The storefront is deliberately light-only — product colour fidelity matters
+ * more here than honouring a dark-mode preference.
+ */
+:root {
+  --background: #fdfbf9;
+  --foreground: #2c2320;
+  --muted: #f4efe9;
+  --muted-foreground: #7d6f66;
+  --border: #e8ded4;
+  --accent: #b4626b;
+  --accent-hover: #9c525a;
+  --accent-soft: #f8eef0;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+}
+
+.font-display {
+  font-family: var(--font-display), ui-serif, Georgia, serif;
+}
+
+/* Hide the horizontal scrollbar on the category rails without disabling scroll. */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

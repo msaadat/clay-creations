@@ -36,6 +36,9 @@ export default async function AdminDashboardLayout({
           <Link href="/admin/products" className="text-muted-foreground hover:text-accent">
             Products
           </Link>
+          <Link href="/admin/categories" className="text-muted-foreground hover:text-accent">
+            Categories
+          </Link>
           <Link href="/" className="text-muted-foreground hover:text-accent">
             View shop
           </Link>

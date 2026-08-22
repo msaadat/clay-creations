@@ -67,10 +67,28 @@ returns that stock; moving it back out takes it off the shelf again.
 
 ## Product images
 
-Photos live in `public/products/`. The admin product form lists whatever is in
-that folder as a picker. There is no upload UI yet — that arrives with the
-object-storage decision (Cloudflare R2 or similar), at which point
-`src/lib/product-images.ts` is the one file to swap.
+Upload photos from the admin product form. They are written to `MEDIA_DIR`
+(`/data/uploads` in Docker — the same persistent volume as the database) and
+served back by `/api/media/<name>`.
+
+They deliberately do **not** go into `public/`: that directory is baked into the
+container image at build time, so anything written there works until the next
+deploy and then disappears. `public/products/` still holds the stock photos the
+seed script uses, and the form's picker lists both.
+
+Three details worth knowing before changing this:
+
+- The stored name is generated (`<timestamp>-<uuid>.<ext>`), never taken from the
+  client, and the extension comes from sniffing the file's leading bytes — the
+  browser's filename and content type are ignored. Serving validates a name
+  against that same shape, so a request for anything else is a 404.
+- Uploading is a route handler, not a server action, because server actions cap
+  request bodies at 1 MB and phone photos are several times that.
+- Removing an image from a product detaches it but leaves the file on disk, so it
+  stays available in the picker. Nothing prunes orphans yet.
+
+`src/lib/media-storage.ts` is the one file to swap if this ever moves to object
+storage (Cloudflare R2 or similar).
 
 ## Deployment
 
@@ -121,10 +139,10 @@ because `prisma/seed.ts` deletes every product **and order** before inserting.
 
 Railway builds the `Dockerfile` automatically. What it needs beyond the defaults:
 
-1. **A volume mounted at `/data`.** Without it the database is wiped on every
-   deploy. Railway mounts volumes owned by root; the entrypoint starts as root,
-   chowns the mount and drops to the `nextjs` user, so no `RAILWAY_RUN_UID`
-   override is needed.
+1. **A volume mounted at `/data`.** Without it the database and every uploaded
+   photo are wiped on each deploy. Railway mounts volumes owned by root; the
+   entrypoint starts as root, creates `/data/uploads`, chowns the mount and
+   drops to the `nextjs` user, so no `RAILWAY_RUN_UID` override is needed.
 2. **Build argument** `NEXT_PUBLIC_WHATSAPP_NUMBER`, set under the service's
    build settings — not as a plain service variable.
 3. **Service variables** `ADMIN_SESSION_SECRET`, and `SEED_ON_BOOT` /
@@ -135,7 +153,7 @@ Railway builds the `Dockerfile` automatically. What it needs beyond the defaults
 `PORT` is injected by Railway and honoured by the server.
 
 **Back it up.** A single SQLite file on one disk with no backup is the real risk
-of this setup. [Litestream](https://litestream.io) replicates it continuously to
+of this setup — and the uploaded photos now share that disk. [Litestream](https://litestream.io) replicates it continuously to
 S3/R2 for pennies a month and is the recommended next addition.
 
 ## Scripts

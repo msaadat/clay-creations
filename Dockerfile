@@ -103,6 +103,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 ENV DATABASE_URL="file:/data/prod.db"
+# Product photos uploaded from the admin. Also on the volume: they must outlive
+# the container, and writing them into public/ would lose them on every deploy.
+ENV MEDIA_DIR="/data/uploads"
 
 RUN groupadd --system --gid 1001 nodejs \
     && useradd --system --uid 1001 --gid nodejs --home-dir /home/nextjs --create-home nextjs
@@ -117,8 +120,8 @@ COPY --from=ops --chown=nextjs:nodejs /ops /ops
 COPY --chown=nextjs:nodejs docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# The database must outlive the container, so /data is where a persistent volume
-# gets mounted — `docker run -v claycreations-data:/data`, or a Railway volume
+# The database and the uploaded photos must outlive the container, so /data is
+# where a persistent volume gets mounted — `docker run -v claycreations-data:/data`, or a Railway volume
 # with /data as its mount path.
 #
 # Deliberately NO `VOLUME /data` instruction: Railway rejects the Dockerfile

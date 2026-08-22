@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useActionState, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { useActionState, useRef, useState } from "react";
+import { ImagePlus, Plus, Trash2 } from "lucide-react";
 import { paisaToRupeeString } from "@/lib/money";
 import { saveProduct, type ProductFormState } from "./actions";
 
@@ -48,6 +48,50 @@ export function ProductForm({
   );
 
   const [images, setImages] = useState<string[]>(product?.images.map((i) => i.url) ?? []);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  const atImageLimit = images.length >= MAX_IMAGES;
+
+  /**
+   * Uploads go to a route handler rather than through the form action: server
+   * actions cap bodies at 1 MB, which a phone photo blows past. Each file is
+   * sent on its own so one rejected image does not lose the rest.
+   */
+  async function uploadFiles(files: File[]) {
+    setUploadError(null);
+    setUploading(true);
+
+    try {
+      let count = images.length;
+
+      for (const file of files) {
+        if (count >= MAX_IMAGES) {
+          setUploadError(`A product can have at most ${MAX_IMAGES} images`);
+          break;
+        }
+
+        const body = new FormData();
+        body.append("file", file);
+
+        const response = await fetch("/api/admin/media", { method: "POST", body });
+        const result = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          setUploadError(result.error ?? `Could not upload ${file.name}`);
+          break;
+        }
+
+        setImages((current) => [...current, result.url]);
+        count += 1;
+      }
+    } catch {
+      setUploadError("Upload failed — check your connection and try again");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   const [variants, setVariants] = useState<VariantRow[]>(
     product?.variants.map((v, i) => ({
@@ -119,9 +163,43 @@ export function ProductForm({
       <fieldset className="rounded-xl border border-border p-5">
         <legend className="px-2 text-sm font-medium">Images</legend>
         <p className="text-xs text-muted-foreground">
-          Pick from photos in <code className="rounded bg-muted px-1">public/products/</code>.
-          The first image is used as the thumbnail.
+          Upload new photos or pick from ones already used. The first image is the thumbnail.
         </p>
+
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            disabled={uploading || atImageLimit}
+            onClick={() => fileInput.current?.click()}
+            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm transition hover:border-accent disabled:opacity-40"
+          >
+            <ImagePlus className="size-4" />
+            {uploading ? "Uploading…" : "Upload photos"}
+          </button>
+          <span className="text-xs text-muted-foreground">
+            JPEG, PNG, WebP or AVIF, up to 8 MB each
+          </span>
+        </div>
+
+        <input
+          ref={fileInput}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/avif"
+          multiple
+          hidden
+          onChange={(event) => {
+            const files = Array.from(event.target.files ?? []);
+            // Cleared so picking the same file twice in a row still fires onChange.
+            event.target.value = "";
+            if (files.length > 0) void uploadFiles(files);
+          }}
+        />
+
+        {uploadError && (
+          <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
+            {uploadError}
+          </p>
+        )}
 
         {images.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-3">
@@ -160,8 +238,9 @@ export function ProductForm({
                 <button
                   key={url}
                   type="button"
+                  disabled={atImageLimit}
                   onClick={() => setImages([...images, url])}
-                  className="relative size-16 overflow-hidden rounded-lg border border-border transition hover:border-accent"
+                  className="relative size-16 overflow-hidden rounded-lg border border-border transition hover:border-accent disabled:opacity-40"
                 >
                   <Image src={url} alt="" fill sizes="64px" className="object-cover" />
                 </button>
@@ -294,6 +373,9 @@ export function ProductForm({
     </form>
   );
 }
+
+/** Mirrors the imageUrls cap in the server action's schema. */
+const MAX_IMAGES = 8;
 
 const inputClass =
   "mt-1 w-full rounded-lg border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-accent";

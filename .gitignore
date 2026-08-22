@@ -56,3 +56,6 @@ prisma/dev.db*
 
 # raw source photos (originals live outside the repo)
 /imagews
+
+# product photos uploaded in development (production keeps them on the volume)
+/.media

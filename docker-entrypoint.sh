@@ -12,12 +12,20 @@ fi
 DB_PATH=$(printf '%s' "${DATABASE_URL#file:}" | sed 's/?.*$//')
 DB_DIR=$(dirname "$DB_PATH")
 
+# Uploaded product photos. Exported so the shell default and the app's default
+# (src/lib/media-storage.ts) cannot drift apart when only one is overridden.
+MEDIA_DIR="${MEDIA_DIR:-/data/uploads}"
+export MEDIA_DIR
+
 # Volume providers (Railway among them) mount the volume owned by root, which
 # shadows the chown done at build time. Fix it here, on every boot, while we
 # still have the privileges to do so.
 if [ "$(id -u)" = "0" ]; then
-  mkdir -p "$DB_DIR"
-  chown -R nextjs:nodejs "$DB_DIR"
+  mkdir -p "$DB_DIR" "$MEDIA_DIR"
+  # Recursive so uploads written by a previous boot stay writable. Both paths are
+  # normally inside /data; naming them separately keeps this correct if MEDIA_DIR
+  # is ever pointed at its own volume.
+  chown -R nextjs:nodejs "$DB_DIR" "$MEDIA_DIR"
   RUN_AS="gosu nextjs:nodejs"
 else
   # Already unprivileged (e.g. RAILWAY_RUN_UID set, or `docker run --user`).

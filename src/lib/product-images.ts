@@ -2,16 +2,28 @@ import "server-only";
 
 import fs from "node:fs/promises";
 import path from "node:path";
+import { listUploadedImages } from "./media-storage";
 
 /**
- * Lists the photos sitting in public/products so the admin form can offer them
- * as a picker.
+ * Every photo the admin form can attach to a product: uploads first (newest at
+ * the front), then the stock images that ship inside the container.
  *
- * This is the interim story until object storage is wired up: drop files into
- * that folder and they show up here. Replace with an S3/R2 listing when uploads
- * move off the local disk.
+ * The two halves exist for different reasons. Uploads are the normal route and
+ * live on the mounted volume — see src/lib/media-storage.ts. The bundled ones
+ * are what `prisma/seed.ts` points the demo catalogue at; they are part of the
+ * image, so they cannot be deleted from the admin, only detached.
  */
 export async function listAvailableProductImages(): Promise<string[]> {
+  const [uploaded, bundled] = await Promise.all([
+    listUploadedImages(),
+    listBundledProductImages(),
+  ]);
+
+  return [...uploaded, ...bundled];
+}
+
+/** Photos committed to public/products and copied into the image at build time. */
+async function listBundledProductImages(): Promise<string[]> {
   const directory = path.join(process.cwd(), "public", "products");
 
   try {
